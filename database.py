@@ -1,8 +1,9 @@
 # database.py
 
-from sqlalchemy import create_engine, Column, Integer, String, Boolean, ForeignKey, Float, Text
+from sqlalchemy import create_engine, Column, Integer, String, Boolean, ForeignKey, Float, Text,DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
+from datetime import datetime
 
 Base = declarative_base()
 
@@ -46,6 +47,7 @@ class Exam(Base):
     category = relationship("Category", back_populates="exams")
     exam_questions = relationship("ExamQuestion", back_populates="exam")
     user_exams = relationship("UserExam", back_populates="exam")
+    payments = relationship("Payment", back_populates="exam")
 
 class ExamQuestion(Base):
     __tablename__ = 'exam_questions'
@@ -72,12 +74,25 @@ class UserExam(Base):
     
     # تعریف رابطه‌ها
     exam = relationship("Exam", back_populates="user_exams")
+    payment = relationship("Payment", back_populates="user_exam", uselist=False)
+
+class Payment(Base):
+    __tablename__ = 'payments'
+    
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('user_exams.user_id'), nullable=False)
+    exam_id = Column(Integer, ForeignKey('exams.id'), nullable=False)
+    amount = Column(Float, nullable=False)
+    payment_date = Column(DateTime, default=datetime.utcnow)
+    is_confirmed = Column(Boolean, default=False)
+
+    user_exam = relationship("UserExam", back_populates="payment")
+    exam = relationship("Exam", back_populates="payments")
+
 
 # ایجاد موتور دیتابیس و جلسه
 engine = create_engine('sqlite:///bot.db')
 Session = sessionmaker(bind=engine)
-
-# ایجاد جداول در صورت عدم وجود
 def create_tables():
     Base.metadata.create_all(engine)
 
