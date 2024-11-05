@@ -12,6 +12,7 @@ from sqlalchemy import func
 from database import Session, Category, Question, Exam, UserExam, ExamQuestion
 from config import BOT_TOKEN, ZARINPAL_MERCHANT,ADMIN_IDS
 
+from handller import add_question_image,add_question_option_a,add_question_option_b,add_question_option_c,add_question_option_d,add_question_correct,add_question_category
 # Setup logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -44,7 +45,9 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     /profile - مشاهده پروفایل کاربری
     """
     await update.message.reply_text(help_text)
-    
+
+
+
 # ******************************************************  Start (Main Menu) *********************************************************************
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
@@ -299,146 +302,146 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return ConversationHandler.END
 
 # *************************************************************************************** Add Question Image *****************************************
-async def add_question_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.callback_query and update.callback_query.data == 'admin_menu':
-        return await back_to_admin(update, context)
+# async def add_question_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
+#     if update.callback_query and update.callback_query.data == 'admin_menu':
+#         return await back_to_admin(update, context)
         
-    context.user_data['question_image'] = update.message.text
+#     context.user_data['question_image'] = update.message.text
     
-    keyboard = [[InlineKeyboardButton("🔙 بازگشت به پنل ادمین", callback_data='admin_menu')]]
-    reply_markup = InlineKeyboardMarkup(keyboard)
+#     keyboard = [[InlineKeyboardButton("🔙 بازگشت به پنل ادمین", callback_data='admin_menu')]]
+#     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    await update.message.reply_text(
-        "📝 لطفاً گزینه A را وارد کنید:",
-        reply_markup=reply_markup
-    )
-    return QUESTION_OPTION_A
-# *************************************************************************************** Add Question Option A *****************************************
-async def add_question_option_a(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.callback_query and update.callback_query.data == 'admin_menu':
-        return await back_to_admin(update, context)
+#     await update.message.reply_text(
+#         "📝 لطفاً گزینه A را وارد کنید:",
+#         reply_markup=reply_markup
+#     )
+#     return QUESTION_OPTION_A
+# # *************************************************************************************** Add Question Option A *****************************************
+# async def add_question_option_a(update: Update, context: ContextTypes.DEFAULT_TYPE):
+#     if update.callback_query and update.callback_query.data == 'admin_menu':
+#         return await back_to_admin(update, context)
         
-    context.user_data['option_a'] = update.message.text
+#     context.user_data['option_a'] = update.message.text
     
-    keyboard = [[InlineKeyboardButton("🔙 بازگشت به پنل ادمین", callback_data='admin_menu')]]
-    reply_markup = InlineKeyboardMarkup(keyboard)
+#     keyboard = [[InlineKeyboardButton("🔙 بازگشت به پنل ادمین", callback_data='admin_menu')]]
+#     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    await update.message.reply_text(
-        "📝 لطفاً گزینه B را وارد کنید:",
-        reply_markup=reply_markup
-    )
-    return QUESTION_OPTION_B
-# *************************************************************************************** Add Question Option B *****************************************
-async def add_question_option_b(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.callback_query and update.callback_query.data == 'admin_menu':
-        return await back_to_admin(update, context)
+#     await update.message.reply_text(
+#         "📝 لطفاً گزینه B را وارد کنید:",
+#         reply_markup=reply_markup
+#     )
+#     return QUESTION_OPTION_B
+# # *************************************************************************************** Add Question Option B *****************************************
+# async def add_question_option_b(update: Update, context: ContextTypes.DEFAULT_TYPE):
+#     if update.callback_query and update.callback_query.data == 'admin_menu':
+#         return await back_to_admin(update, context)
         
-    context.user_data['option_b'] = update.message.text
+#     context.user_data['option_b'] = update.message.text
     
-    keyboard = [[InlineKeyboardButton("🔙 بازگشت به پنل ادمین", callback_data='admin_menu')]]
-    reply_markup = InlineKeyboardMarkup(keyboard)
+#     keyboard = [[InlineKeyboardButton("🔙 بازگشت به پنل ادمین", callback_data='admin_menu')]]
+#     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    await update.message.reply_text(
-        "📝 لطفاً گزینه C را وارد کنید:",
-        reply_markup=reply_markup
-    )
-    return QUESTION_OPTION_C
-# *************************************************************************************** Add Question Option C *****************************************
-async def add_question_option_c(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.callback_query and update.callback_query.data == 'admin_menu':
-        return await back_to_admin(update, context)
+#     await update.message.reply_text(
+#         "📝 لطفاً گزینه C را وارد کنید:",
+#         reply_markup=reply_markup
+#     )
+#     return QUESTION_OPTION_C
+# # *************************************************************************************** Add Question Option C *****************************************
+# async def add_question_option_c(update: Update, context: ContextTypes.DEFAULT_TYPE):
+#     if update.callback_query and update.callback_query.data == 'admin_menu':
+#         return await back_to_admin(update, context)
         
-    context.user_data['option_c'] = update.message.text
+#     context.user_data['option_c'] = update.message.text
     
-    keyboard = [[InlineKeyboardButton("🔙 بازگشت به پنل ادمین", callback_data='admin_menu')]]
-    reply_markup = InlineKeyboardMarkup(keyboard)
+#     keyboard = [[InlineKeyboardButton("🔙 بازگشت به پنل ادمین", callback_data='admin_menu')]]
+#     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    await update.message.reply_text(
-        "📝 لطفاً گزینه D را وارد کنید:",
-        reply_markup=reply_markup
-    )
-    return QUESTION_OPTION_D
-# *************************************************************************************** Add Question Option D *****************************************
-async def add_question_option_d(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.callback_query and update.callback_query.data == 'admin_menu':
-        return await back_to_admin(update, context)
+#     await update.message.reply_text(
+#         "📝 لطفاً گزینه D را وارد کنید:",
+#         reply_markup=reply_markup
+#     )
+#     return QUESTION_OPTION_D
+# # *************************************************************************************** Add Question Option D *****************************************
+# async def add_question_option_d(update: Update, context: ContextTypes.DEFAULT_TYPE):
+#     if update.callback_query and update.callback_query.data == 'admin_menu':
+#         return await back_to_admin(update, context)
         
-    context.user_data['option_d'] = update.message.text
+#     context.user_data['option_d'] = update.message.text
     
-    keyboard = [[InlineKeyboardButton("🔙 بازگشت به پنل ادمین", callback_data='admin_menu')]]
-    reply_markup = InlineKeyboardMarkup(keyboard)
+#     keyboard = [[InlineKeyboardButton("🔙 بازگشت به پنل ادمین", callback_data='admin_menu')]]
+#     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    await update.message.reply_text(
-        "📝 لطفاً گزینه صحیح را وارد کنید (A, B, C یا D):",
-        reply_markup=reply_markup
-    )
-    return QUESTION_CORRECT
-# *************************************************************************************** Add Question Currect *****************************************
-async def add_question_correct(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.callback_query and update.callback_query.data == 'admin_menu':
-        return await back_to_admin(update, context)
+#     await update.message.reply_text(
+#         "📝 لطفاً گزینه صحیح را وارد کنید (A, B, C یا D):",
+#         reply_markup=reply_markup
+#     )
+#     return QUESTION_CORRECT
+# # *************************************************************************************** Add Question Currect *****************************************
+# async def add_question_correct(update: Update, context: ContextTypes.DEFAULT_TYPE):
+#     if update.callback_query and update.callback_query.data == 'admin_menu':
+#         return await back_to_admin(update, context)
         
-    correct_answer = update.message.text.upper()
-    if correct_answer not in ['A', 'B', 'C', 'D']:
-        await update.message.reply_text("❌ لطفاً یکی از گزینه‌های A، B، C یا D را وارد کنید.")
-        return QUESTION_CORRECT
+#     correct_answer = update.message.text.upper()
+#     if correct_answer not in ['A', 'B', 'C', 'D']:
+#         await update.message.reply_text("❌ لطفاً یکی از گزینه‌های A، B، C یا D را وارد کنید.")
+#         return QUESTION_CORRECT
         
-    context.user_data['correct_answer'] = correct_answer
+#     context.user_data['correct_answer'] = correct_answer
     
-    session = Session()
-    categories = session.query(Category).all()
-    session.close()
+#     session = Session()
+#     categories = session.query(Category).all()
+#     session.close()
     
-    keyboard = []
-    for category in categories:
-        keyboard.append([InlineKeyboardButton(
-            category.name, 
-            callback_data=f'qcat_{category.id}'
-        )])
-    keyboard.append([InlineKeyboardButton("🔙 بازگشت به پنل ادمین", callback_data='admin_menu')])
-    reply_markup = InlineKeyboardMarkup(keyboard)
+#     keyboard = []
+#     for category in categories:
+#         keyboard.append([InlineKeyboardButton(
+#             category.name, 
+#             callback_data=f'qcat_{category.id}'
+#         )])
+#     keyboard.append([InlineKeyboardButton("🔙 بازگشت به پنل ادمین", callback_data='admin_menu')])
+#     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    await update.message.reply_text(
-        "📂 لطفاً دسته‌بندی سؤال را انتخاب کنید:",
-        reply_markup=reply_markup
-    )
-    return QUESTION_CATEGORY
-# *************************************************************************************** Add Question Category *****************************************
-async def add_question_category(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
+#     await update.message.reply_text(
+#         "📂 لطفاً دسته‌بندی سؤال را انتخاب کنید:",
+#         reply_markup=reply_markup
+#     )
+#     return QUESTION_CATEGORY
+# # *************************************************************************************** Add Question Category *****************************************
+# async def add_question_category(update: Update, context: ContextTypes.DEFAULT_TYPE):
+#     query = update.callback_query
+#     await query.answer()
     
-    if query.data == 'admin_menu':
-        return await back_to_admin(update, context)
+#     if query.data == 'admin_menu':
+#         return await back_to_admin(update, context)
         
-    category_id = int(query.data.split('_')[1])
+#     category_id = int(query.data.split('_')[1])
     
-    session = Session()
-    new_question = Question(
-        title=context.user_data['question_title'],
-        image_url=context.user_data['question_image'] if context.user_data['question_image'] != '0' else None,
-        option_a=context.user_data['option_a'],
-        option_b=context.user_data['option_b'],
-        option_c=context.user_data['option_c'],
-        option_d=context.user_data['option_d'],
-        correct_answer=context.user_data['correct_answer'],
-        category_id=category_id
-    )
-    session.add(new_question)
-    session.commit()
-    session.close()
+#     session = Session()
+#     new_question = Question(
+#         title=context.user_data['question_title'],
+#         image_url=context.user_data['question_image'] if context.user_data['question_image'] != '0' else None,
+#         option_a=context.user_data['option_a'],
+#         option_b=context.user_data['option_b'],
+#         option_c=context.user_data['option_c'],
+#         option_d=context.user_data['option_d'],
+#         correct_answer=context.user_data['correct_answer'],
+#         category_id=category_id
+#     )
+#     session.add(new_question)
+#     session.commit()
+#     session.close()
     
-    # پاک کردن داده‌های ذخیره شده
-    context.user_data.clear()
+#     # پاک کردن داده‌های ذخیره شده
+#     context.user_data.clear()
     
-    keyboard = [[InlineKeyboardButton("🔙 بازگشت به پنل ادمین", callback_data='admin_menu')]]
-    reply_markup = InlineKeyboardMarkup(keyboard)
+#     keyboard = [[InlineKeyboardButton("🔙 بازگشت به پنل ادمین", callback_data='admin_menu')]]
+#     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    await query.edit_message_text(
-        "✅ سؤال با موفقیت اضافه شد.",
-        reply_markup=reply_markup
-    )
-    return ConversationHandler.END
+#     await query.edit_message_text(
+#         "✅ سؤال با موفقیت اضافه شد.",
+#         reply_markup=reply_markup
+#     )
+#     return ConversationHandler.END
 
 # *************************************************************************************** Create Exam Start *****************************************
 async def create_exam_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -875,9 +878,9 @@ async def show_question(query: CallbackQuery, user_exam_id: int, session: Sessio
     question_text = (
         f"❓ سؤال {user_exam.current_question + 1} از {exam.question_count}:\n\n"
         f"{question.title}\n\n"
-        f" {question.option_a}\n"
+        f"🅱️{question.option_a}\n"
         f"🅱️ {question.option_b}\n"
-        f"✅{question.option_c}\n"
+        f"🅱️{question.option_c}\n"
         f"🆔 {question.option_d}"
     )
     
@@ -999,7 +1002,7 @@ async def show_exam_result(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     session.close()
 
-# ***********************************************************************************************************************************
+# *************************************************************************************** Main *****************************************
 
 
    
@@ -1062,13 +1065,6 @@ async def show_payment_options(update: Update, context: ContextTypes.DEFAULT_TYP
         reply_markup=reply_markup
     )
     session.close()
-
-
-
-
-
-
-# *************************************************************************************** Main *****************************************
 def main():
     application = Application.builder().token(BOT_TOKEN).build()
     
@@ -1130,6 +1126,7 @@ def main():
         ]
     )
     
+       
     create_exam_handler = ConversationHandler(
         entry_points=[CallbackQueryHandler(create_exam_start, pattern='^create_exam$')],
         states={

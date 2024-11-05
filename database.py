@@ -22,7 +22,7 @@ class Question(Base):
     
     id = Column(Integer, primary_key=True)
     title = Column(Text, nullable=False)
-    image_url = Column(String(500))
+    image_url = Column(String(500)) # Image Field
     option_a = Column(String(200), nullable=False)
     option_b = Column(String(200), nullable=False)
     option_c = Column(String(200), nullable=False)
