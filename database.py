@@ -48,6 +48,8 @@ class Exam(Base):
     exam_questions = relationship("ExamQuestion", back_populates="exam")
     user_exams = relationship("UserExam", back_populates="exam")
     payments = relationship("Payment", back_populates="exam")
+    
+
 
 class ExamQuestion(Base):
     __tablename__ = 'exam_questions'

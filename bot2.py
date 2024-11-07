@@ -10,10 +10,14 @@ from telegram.ext import (
 from telegram.constants import ParseMode
 from sqlalchemy import func
 from database import Session, Category, Question, Exam, UserExam, ExamQuestion
-from config import BOT_TOKEN, ZARINPAL_MERCHANT
+from config import BOT_TOKEN, ZARINPAL_MERCHANT,ADMIN_IDS
 
 # Setup logging
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+    # filename='bot.log'
+)
 logger = logging.getLogger(__name__)
 
 # Conversation states
@@ -22,7 +26,6 @@ logger = logging.getLogger(__name__)
  QUESTION_OPTION_C, QUESTION_OPTION_D, QUESTION_CORRECT, QUESTION_CATEGORY,
  EXAM_TITLE, EXAM_PRICE, EXAM_QUESTION_COUNT, EXAM_CATEGORY) = range(13)
 
-ADMIN_IDS = [7158312257]
 #****************************   ADMIN CONTROLLER ********************************************
 def admin_only(func):
     @wraps(func)
@@ -34,7 +37,7 @@ def admin_only(func):
         return await func(update, context, *args, **kwargs)
     return wrapped
 
-#************   ADMIN CONTROLLER **********************************************
+# *************************************************************************************** Help Command *****************************************
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     help_text = """
@@ -45,10 +48,8 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     /profile - مشاهده پروفایل کاربری
     """
     await update.message.reply_text(help_text)
-
-
-
-# ******************************************************  پیغام خوش آمدگویی  *********************************************************************
+    
+# ******************************************************  Start (Main Menu) *********************************************************************
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
         [InlineKeyboardButton("📚 مشاهده دسته‌بندی‌ها", callback_data='show_categories')],
@@ -75,10 +76,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     # همه دکمه‌ها به منوی اصلی برمی‌گردند
     await start(update, context)
-   
-    
-
-  
     query = update.callback_query
     await query.answer()
 
@@ -185,8 +182,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             # اگر هیچ کدام کار نکرد، یک پیام جدید ارسال می‌کنیم
             await query.message.reply_text(text=message_text, reply_markup=reply_markup)
             await query.message.delete()
-# ******************************************************  پیغام خوش آمدگویی  *********************************************************************
-   
+
+# *************************************************************************************** Show Admin Menu ***************************************** 
 @admin_only
 async def show_admin_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
@@ -209,13 +206,12 @@ async def show_admin_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=reply_markup
         )
 
-#-----------------------------------------------------------------------------------------------  
-
+# *************************************************************************************** Admin Start *****************************************
 @admin_only
 async def admin_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return await show_admin_menu(update, context)
 
-# Category Management
+# *************************************************************************************** Add Category Start *****************************************
 async def add_category_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -228,7 +224,7 @@ async def add_category_start(update: Update, context: ContextTypes.DEFAULT_TYPE)
         reply_markup=reply_markup
     )
     return CATEGORY_NAME
-
+# *************************************************************************************** Back To Admin *****************************************
 async def back_to_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     if query:
@@ -237,7 +233,7 @@ async def back_to_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return ConversationHandler.END
     return ConversationHandler.END
 
-# Question Management
+# *************************************************************************************** Add Question Start *****************************************
 async def add_question_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -250,7 +246,7 @@ async def add_question_start(update: Update, context: ContextTypes.DEFAULT_TYPE)
         reply_markup=reply_markup
     )
     return QUESTION_TITLE
-
+# *************************************************************************************** Add Question Title *****************************************
 async def add_question_title(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.callback_query and update.callback_query.data == 'admin_menu':
         return await back_to_admin(update, context)
@@ -267,7 +263,7 @@ async def add_question_title(update: Update, context: ContextTypes.DEFAULT_TYPE)
     )
     return QUESTION_IMAGE
 
-# همه توابع دیگر نیز به همین شکل بروزرسانی می‌شوند...
+# *************************************************************************************** Add Category Finish *****************************************
 
 async def add_category_finish(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.callback_query and update.callback_query.data == 'admin_menu':
@@ -288,7 +284,7 @@ async def add_category_finish(update: Update, context: ContextTypes.DEFAULT_TYPE
         reply_markup=reply_markup
     )
     return ConversationHandler.END
-
+# *************************************************************************************** Cancel *****************************************
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """لغو عملیات و برگشت به منوی اصلی"""
     keyboard = [[InlineKeyboardButton("🔙 بازگشت به پنل ادمین", callback_data='admin_menu')]]
@@ -306,8 +302,7 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
     return ConversationHandler.END
 
-# ___________________________________________________________________________________________________________________________________
-
+# *************************************************************************************** Add Question Image *****************************************
 async def add_question_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.callback_query and update.callback_query.data == 'admin_menu':
         return await back_to_admin(update, context)
@@ -322,7 +317,7 @@ async def add_question_image(update: Update, context: ContextTypes.DEFAULT_TYPE)
         reply_markup=reply_markup
     )
     return QUESTION_OPTION_A
-
+# *************************************************************************************** Add Question Option A *****************************************
 async def add_question_option_a(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.callback_query and update.callback_query.data == 'admin_menu':
         return await back_to_admin(update, context)
@@ -337,7 +332,7 @@ async def add_question_option_a(update: Update, context: ContextTypes.DEFAULT_TY
         reply_markup=reply_markup
     )
     return QUESTION_OPTION_B
-
+# *************************************************************************************** Add Question Option B *****************************************
 async def add_question_option_b(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.callback_query and update.callback_query.data == 'admin_menu':
         return await back_to_admin(update, context)
@@ -352,7 +347,7 @@ async def add_question_option_b(update: Update, context: ContextTypes.DEFAULT_TY
         reply_markup=reply_markup
     )
     return QUESTION_OPTION_C
-
+# *************************************************************************************** Add Question Option C *****************************************
 async def add_question_option_c(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.callback_query and update.callback_query.data == 'admin_menu':
         return await back_to_admin(update, context)
@@ -367,7 +362,7 @@ async def add_question_option_c(update: Update, context: ContextTypes.DEFAULT_TY
         reply_markup=reply_markup
     )
     return QUESTION_OPTION_D
-
+# *************************************************************************************** Add Question Option D *****************************************
 async def add_question_option_d(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.callback_query and update.callback_query.data == 'admin_menu':
         return await back_to_admin(update, context)
@@ -382,7 +377,7 @@ async def add_question_option_d(update: Update, context: ContextTypes.DEFAULT_TY
         reply_markup=reply_markup
     )
     return QUESTION_CORRECT
-
+# *************************************************************************************** Add Question Currect *****************************************
 async def add_question_correct(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.callback_query and update.callback_query.data == 'admin_menu':
         return await back_to_admin(update, context)
@@ -412,7 +407,7 @@ async def add_question_correct(update: Update, context: ContextTypes.DEFAULT_TYP
         reply_markup=reply_markup
     )
     return QUESTION_CATEGORY
-
+# *************************************************************************************** Add Question Category *****************************************
 async def add_question_category(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -449,7 +444,7 @@ async def add_question_category(update: Update, context: ContextTypes.DEFAULT_TY
     )
     return ConversationHandler.END
 
-# توابع مربوط به ایجاد آزمون
+# *************************************************************************************** Create Exam Start *****************************************
 async def create_exam_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -462,7 +457,7 @@ async def create_exam_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=reply_markup
     )
     return EXAM_TITLE
-
+# *************************************************************************************** Create Exam Title *****************************************
 async def create_exam_title(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.callback_query and update.callback_query.data == 'admin_menu':
         return await back_to_admin(update, context)
@@ -478,7 +473,7 @@ async def create_exam_title(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=reply_markup
     )
     return EXAM_PRICE
-
+# *************************************************************************************** Create Exam Price *****************************************
 async def create_exam_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.callback_query and update.callback_query.data == 'admin_menu':
         return await back_to_admin(update, context)
@@ -500,7 +495,7 @@ async def create_exam_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=reply_markup
     )
     return EXAM_QUESTION_COUNT
-
+# *************************************************************************************** Create Exam Question Count *****************************************
 async def create_exam_question_count(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.callback_query and update.callback_query.data == 'admin_menu':
         return await back_to_admin(update, context)
@@ -532,7 +527,7 @@ async def create_exam_question_count(update: Update, context: ContextTypes.DEFAU
         reply_markup=reply_markup
     )
     return EXAM_CATEGORY
-
+# *************************************************************************************** Create Exam Finish *****************************************
 async def create_exam_finish(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -599,12 +594,7 @@ async def create_exam_finish(update: Update, context: ContextTypes.DEFAULT_TYPE)
     )
     return ConversationHandler.END
 
-# ------------------------------------------------------------------------------------------------------------------------------------
-
-# ******************************************************************************************************
-
-
-
+# *************************************************************************************** Show Categories *****************************************
 async def show_categories(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -639,7 +629,7 @@ async def show_categories(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=reply_markup
     )
     session.close()
-
+# *************************************************************************************** Show Category Exam *****************************************
 async def show_category_exams(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -676,7 +666,7 @@ async def show_category_exams(update: Update, context: ContextTypes.DEFAULT_TYPE
         reply_markup=reply_markup
     )
     session.close()
-
+# *************************************************************************************** Show My Exam *****************************************
 async def show_my_exams(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -704,7 +694,7 @@ async def show_my_exams(update: Update, context: ContextTypes.DEFAULT_TYPE):
             score_text = f" - نمره: {user_exam.score}" if user_exam.is_finished else ""
             keyboard.append([InlineKeyboardButton(
                 f"📝 {exam.title} ({status}){score_text}",
-                callback_data=f'myexam_{user_exam.id}'
+                callback_data=f'exam_{user_exam.id}'
             )])
     
     keyboard.append([InlineKeyboardButton("🔙 بازگشت", callback_data='start')])
@@ -716,10 +706,7 @@ async def show_my_exams(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     session.close()
 
-# در بخش main() این handler ها را اضافه کنید:
-    
-
-# اصلاح تابع add_question_category برای رفع مشکل انتخاب دسته
+# *************************************************************************************** Add Question Category *****************************************
 async def add_question_category(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -766,11 +753,55 @@ async def add_question_category(update: Update, context: ContextTypes.DEFAULT_TY
         )
         return ConversationHandler.END
 
-# ******************************************************************************************************
+# *************************************************************************************** Show Exam Detail *****************************************
+# async def show_exam_details(update: Update, context: ContextTypes.DEFAULT_TYPE):
+#     query = update.callback_query
+#     await query.answer()
+    
+#     parts = query.data.split('_')
+#     if parts[0] == 'exam':
+#         if len(parts) > 2 and parts[1] == 'payment':
+#             exam_id = int(parts[2])
+#             return await show_payment_options(update, context)
+#         else:
+#             exam_id = int(parts[1])
+#     else:
+#         await query.edit_message_text("خطا: داده‌ی نامعتبر")
+#         return
 
-# $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$ AZMOON $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
-
-# ... (کدهای قبلی حفظ شوند)
+#     session = Session()
+#     exam = session.query(Exam).get(exam_id)
+    
+#     if not exam:
+#         await query.edit_message_text("❌ آزمون مورد نظر یافت نشد.")
+#         session.close()
+#         return
+    
+#     price_text = f"{exam.price:,} تومان" if exam.price > 0 else "رایگان"
+#     exam_info = (
+#         f"📝 عنوان آزمون: {exam.title}\n"
+#         f"💰 قیمت: {price_text}\n"
+#     )
+    
+#     # اضافه کردن اطلاعات اضافی در صورت وجود
+#     if hasattr(exam, 'duration'):
+#         exam_info += f"⏱ مدت زمان: {exam.duration} دقیقه\n"
+#     if hasattr(exam, 'question_count'):
+#         exam_info += f"❓ تعداد سوالات: {exam.question_count}\n"
+#     if hasattr(exam, 'description'):
+#         exam_info += f"\n📜 توضیحات:\n{exam.description}"
+    
+#     keyboard = []
+#     if exam.price > 0:
+#         keyboard.append([InlineKeyboardButton("💳 پرداخت و شروع آزمون", callback_data=f'exam_payment_{exam_id}')])
+#     else:
+#         keyboard.append([InlineKeyboardButton("▶️ شروع آزمون", callback_data=f'start_exam_{exam_id}')])
+    
+#     keyboard.append([InlineKeyboardButton("🔙 بازگشت به لیست آزمون‌ها", callback_data=f'category_{exam.category_id}')])
+#     reply_markup = InlineKeyboardMarkup(keyboard)
+    
+#     await query.edit_message_text(exam_info, reply_markup=reply_markup)
+#     session.close()  
 
 async def show_exam_details(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -828,6 +859,7 @@ async def show_exam_details(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     session.close()
 
+# *************************************************************************************** Start Exam *****************************************
 async def start_exam(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -858,7 +890,7 @@ async def start_exam(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # نمایش اولین سؤال
     await show_question(query, user_exam.id, session)
     session.close()
-
+# *************************************************************************************** Continue Exam *****************************************
 async def continue_exam(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -876,7 +908,7 @@ async def continue_exam(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # نمایش سؤال فعلی
     await show_question(query, user_exam_id, session)
     session.close()
-
+# *************************************************************************************** Show Question *****************************************
 async def show_question(query: CallbackQuery, user_exam_id: int, session: Session):
     user_exam = session.query(UserExam).get(user_exam_id)
     exam = session.query(Exam).get(user_exam.exam_id)
@@ -917,7 +949,7 @@ async def show_question(query: CallbackQuery, user_exam_id: int, session: Sessio
         question_text,
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
-
+# *************************************************************************************** Handel Answer *****************************************
 async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -940,7 +972,7 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # نمایش سؤال بعدی
     await show_question(query, int(user_exam_id), session)
     session.close()
-
+# *************************************************************************************** Finish Exam *****************************************
 async def finish_exam(query: CallbackQuery, user_exam_id: int, session: Session):
     user_exam = session.query(UserExam).get(user_exam_id)
     exam = session.query(Exam).get(user_exam.exam_id)
@@ -970,7 +1002,7 @@ async def finish_exam(query: CallbackQuery, user_exam_id: int, session: Session)
             InlineKeyboardButton("🏠 بازگشت به منو", callback_data='start')
         ]])
     )
-
+# *************************************************************************************** Show Exam Result *****************************************
 async def show_exam_result(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -1027,11 +1059,76 @@ async def show_exam_result(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     session.close()
 
+# ***********************************************************************************************************************************
+
 
    
 
-# $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$ AZMOON $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
+async def show_bank_account(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    
+    exam_id = int(query.data.split('_')[2])
+    
+    session = Session()
+    exam = session.query(Exam).get(exam_id)
+    
+    bank_account = "شماره حساب: IR123456789012345678901234"  # جایگزین با شماره حساب واقعی
+    
+    keyboard = [
+        [InlineKeyboardButton("🔙 بازگشت به گزینه‌های پرداخت", callback_data=f'exam_payment_{exam_id}')]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await query.edit_message_text(
+        f"برای پرداخت هزینه آزمون «{exam.title}»، لطفاً مبلغ {exam.price:,} تومان را به حساب زیر واریز کنید:\n\n"
+        f"{bank_account}\n\n"
+        "پس از واریز، لطفاً تصویر فیش واریزی را به پشتیبانی ارسال کنید.",
+        reply_markup=reply_markup
+    )
+    session.close()
+
+  
+async def show_payment_options(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    
+    parts = query.data.split('_')
+    if len(parts) < 3 or parts[0] != 'exam' or parts[1] != 'payment':
+        await query.edit_message_text("خطا: داده‌ی نامعتبر")
+        return
+    
+    exam_id = int(parts[2])
+    
+    session = Session()
+    exam = session.query(Exam).get(exam_id)
+    
+    if not exam:
+        await query.edit_message_text("❌ آزمون مورد نظر یافت نشد.")
+        session.close()
+        return
+    
+    keyboard = [
+        [InlineKeyboardButton("💳 پرداخت آنلاین", callback_data=f'online_payment_{exam_id}')],
+        [InlineKeyboardButton("🏦 پرداخت واریز به حساب", callback_data=f'bank_transfer_{exam_id}')],
+        [InlineKeyboardButton("🔙 بازگشت به جزئیات آزمون", callback_data=f'exam_{exam_id}')]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await query.edit_message_text(
+        f"لطفاً روش پرداخت برای آزمون «{exam.title}» را انتخاب کنید:\n"
+        f"مبلغ قابل پرداخت: {exam.price:,} تومان",
+        reply_markup=reply_markup
+    )
+    session.close()
+
+
+
+
+
+
+# *************************************************************************************** Main *****************************************
 def main():
     application = Application.builder().token(BOT_TOKEN).build()
     
@@ -1148,6 +1245,17 @@ def main():
     application.add_handler(CallbackQueryHandler(handle_answer, pattern='^ans_'))
     application.add_handler(CallbackQueryHandler(show_exam_result, pattern='^result_'))
     application.add_handler(CommandHandler("help", help_command))
+    
+    application.add_handler(CallbackQueryHandler(show_payment_options, pattern='^pay_'))
+    application.add_handler(CallbackQueryHandler(show_bank_account, pattern='^bank_transfer_'))
+    
+    
+    application.add_handler(CallbackQueryHandler(show_category_exams, pattern=r'^category_'))
+    application.add_handler(CallbackQueryHandler(show_exam_details, pattern=r'^exam_'))
+    application.add_handler(CallbackQueryHandler(show_payment_options, pattern=r'^exam_payment_'))
+    application.add_handler(CallbackQueryHandler(show_bank_account, pattern=r'^bank_transfer_'))
+    
+ 
     
     
     # Start the bot

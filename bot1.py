@@ -753,55 +753,112 @@ async def add_question_category(update: Update, context: ContextTypes.DEFAULT_TY
         return ConversationHandler.END
 
 # *************************************************************************************** Show Exam Detail *****************************************
+# async def show_exam_details(update: Update, context: ContextTypes.DEFAULT_TYPE):
+#     query = update.callback_query
+#     await query.answer()
+    
+#     parts = query.data.split('_')
+#     if parts[0] == 'exam':
+#         if len(parts) > 2 and parts[1] == 'payment':
+#             exam_id = int(parts[2])
+#             return await show_payment_options(update, context)
+#         else:
+#             exam_id = int(parts[1])
+#     else:
+#         await query.edit_message_text("خطا: داده‌ی نامعتبر")
+#         return
+
+#     session = Session()
+#     exam = session.query(Exam).get(exam_id)
+    
+#     if not exam:
+#         await query.edit_message_text("❌ آزمون مورد نظر یافت نشد.")
+#         session.close()
+#         return
+    
+#     price_text = f"{exam.price:,} تومان" if exam.price > 0 else "رایگان"
+#     exam_info = (
+#         f"📝 عنوان آزمون: {exam.title}\n"
+#         f"💰 قیمت: {price_text}\n"
+#     )
+    
+#     # اضافه کردن اطلاعات اضافی در صورت وجود
+#     if hasattr(exam, 'duration'):
+#         exam_info += f"⏱ مدت زمان: {exam.duration} دقیقه\n"
+#     if hasattr(exam, 'question_count'):
+#         exam_info += f"❓ تعداد سوالات: {exam.question_count}\n"
+#     if hasattr(exam, 'description'):
+#         exam_info += f"\n📜 توضیحات:\n{exam.description}"
+    
+#     keyboard = []
+#     if exam.price > 0:
+#         keyboard.append([InlineKeyboardButton("💳 پرداخت و شروع آزمون", callback_data=f'exam_payment_{exam_id}')])
+#     else:
+#         keyboard.append([InlineKeyboardButton("▶️ شروع آزمون", callback_data=f'start_exam_{exam_id}')])
+    
+#     keyboard.append([InlineKeyboardButton("🔙 بازگشت به لیست آزمون‌ها", callback_data=f'category_{exam.category_id}')])
+#     reply_markup = InlineKeyboardMarkup(keyboard)
+    
+#     await query.edit_message_text(exam_info, reply_markup=reply_markup)
+#     session.close()  
+     
+
 async def show_exam_details(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     
-    parts = query.data.split('_')
-    if parts[0] == 'exam':
-        if len(parts) > 2 and parts[1] == 'payment':
-            exam_id = int(parts[2])
-            return await show_payment_options(update, context)
-        else:
-            exam_id = int(parts[1])
-    else:
-        await query.edit_message_text("خطا: داده‌ی نامعتبر")
-        return
-
+    exam_id = int(query.data.split('_')[1])
+    user_id = update.effective_user.id
+    
     session = Session()
     exam = session.query(Exam).get(exam_id)
     
     if not exam:
-        await query.edit_message_text("❌ آزمون مورد نظر یافت نشد.")
+        await query.edit_message_text(
+            "❌ آزمون مورد نظر یافت نشد.",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("🔙 بازگشت", callback_data='show_categories')
+            ]])
+        )
         session.close()
         return
-    
-    price_text = f"{exam.price:,} تومان" if exam.price > 0 else "رایگان"
-    exam_info = (
-        f"📝 عنوان آزمون: {exam.title}\n"
-        f"💰 قیمت: {price_text}\n"
-    )
-    
-    # اضافه کردن اطلاعات اضافی در صورت وجود
-    if hasattr(exam, 'duration'):
-        exam_info += f"⏱ مدت زمان: {exam.duration} دقیقه\n"
-    if hasattr(exam, 'question_count'):
-        exam_info += f"❓ تعداد سوالات: {exam.question_count}\n"
-    if hasattr(exam, 'description'):
-        exam_info += f"\n📜 توضیحات:\n{exam.description}"
+
+    # بررسی آزمون‌های قبلی کاربر
+    existing_exam = session.query(UserExam).filter_by(
+        user_id=user_id,
+        exam_id=exam_id
+    ).first()
     
     keyboard = []
-    if exam.price > 0:
-        keyboard.append([InlineKeyboardButton("💳 پرداخت و شروع آزمون", callback_data=f'exam_payment_{exam_id}')])
+    if existing_exam:
+        if existing_exam.is_finished:
+            score_text = f"\nنمره شما: {existing_exam.score}"
+            keyboard.append([InlineKeyboardButton("📊 مشاهده جزئیات", callback_data=f'result_{existing_exam.id}')])
+        else:
+            score_text = "\n⏳ آزمون ناتمام"
+            keyboard.append([InlineKeyboardButton("▶️ ادامه آزمون", callback_data=f'continue_{existing_exam.id}')])
     else:
-        keyboard.append([InlineKeyboardButton("▶️ شروع آزمون", callback_data=f'start_exam_{exam_id}')])
+        score_text = ""
+        if exam.price > 0:
+            keyboard.append([InlineKeyboardButton("💳 پرداخت و شروع آزمون", callback_data=f'pay_{exam_id}')])
+        else:
+            keyboard.append([InlineKeyboardButton("▶️ شروع آزمون", callback_data=f'start_exam_{exam_id}')])
+
+    category = session.query(Category).get(exam.category_id)
+    price_text = f"{exam.price:,} تومان" if exam.price > 0 else "رایگان"
     
-    keyboard.append([InlineKeyboardButton("🔙 بازگشت به لیست آزمون‌ها", callback_data=f'category_{exam.category_id}')])
+    keyboard.append([InlineKeyboardButton("🔙 بازگشت", callback_data=f'category_{exam.category_id}')])
     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    await query.edit_message_text(exam_info, reply_markup=reply_markup)
-    session.close()  
-     
+    await query.edit_message_text(
+        f"📝 {exam.title}\n"
+        f"📚 دسته‌بندی: {category.name}\n"
+        f"💰 قیمت: {price_text}\n"
+        f"❓ تعداد سؤالات: {exam.question_count}{score_text}",
+        reply_markup=reply_markup
+    )
+    session.close()
+
 # *************************************************************************************** Start Exam *****************************************
 async def start_exam(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
