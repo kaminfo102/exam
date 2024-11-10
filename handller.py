@@ -52,6 +52,7 @@ async def show_admin_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=reply_markup
         )
 
+@admin_only
 async def back_to_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     if query:
@@ -60,6 +61,7 @@ async def back_to_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return ConversationHandler.END
     return ConversationHandler.END
 
+# *************************************************************************************** Add Question Image *****************************************
 async def add_question_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.callback_query and update.callback_query.data == 'admin_menu':
         return await back_to_admin(update, context)
@@ -136,7 +138,6 @@ async def add_question_option_d(update: Update, context: ContextTypes.DEFAULT_TY
     return QUESTION_CORRECT
 
 # *************************************************************************************** Add Question Currect *****************************************
-
 async def add_question_correct(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.callback_query and update.callback_query.data == 'admin_menu':
         return await back_to_admin(update, context)
@@ -166,8 +167,6 @@ async def add_question_correct(update: Update, context: ContextTypes.DEFAULT_TYP
         reply_markup=reply_markup
     )
     return QUESTION_CATEGORY
-
-
 
 # *************************************************************************************** Add Question Category *****************************************
 async def add_question_category(update: Update, context: ContextTypes.DEFAULT_TYPE):

@@ -12,7 +12,9 @@ from sqlalchemy import func
 from database import Session, Category, Question, Exam, UserExam, ExamQuestion
 from config import BOT_TOKEN, ZARINPAL_MERCHANT,ADMIN_IDS
 
-from handller import add_question_image,add_question_option_a,add_question_option_b,add_question_option_c,add_question_option_d,add_question_correct,add_question_category
+from handller import add_question_image,add_question_option_a,add_question_option_b,add_question_option_c,add_question_option_d,add_question_correct,add_question_category,admin_only,show_admin_menu,back_to_admin
+
+
 # Setup logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -24,15 +26,15 @@ logger = logging.getLogger(__name__)
  EXAM_TITLE, EXAM_PRICE, EXAM_QUESTION_COUNT, EXAM_CATEGORY) = range(13)
 
 #****************************   ADMIN CONTROLLER ********************************************
-def admin_only(func):
-    @wraps(func)
-    async def wrapped(update: Update, context: ContextTypes.DEFAULT_TYPE, *args, **kwargs):
-        user_id = update.effective_user.id
-        if user_id not in ADMIN_IDS:
-            await update.message.reply_text("⛔️ شما دسترسی به این عملکرد را ندارید.")
-            return ConversationHandler.END
-        return await func(update, context, *args, **kwargs)
-    return wrapped
+# def admin_only(func):
+#     @wraps(func)
+#     async def wrapped(update: Update, context: ContextTypes.DEFAULT_TYPE, *args, **kwargs):
+#         user_id = update.effective_user.id
+#         if user_id not in ADMIN_IDS:
+#             await update.message.reply_text("⛔️ شما دسترسی به این عملکرد را ندارید.")
+#             return ConversationHandler.END
+#         return await func(update, context, *args, **kwargs)
+#     return wrapped
 
 # *************************************************************************************** Help Command *****************************************
 
@@ -183,27 +185,27 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.message.delete()
 
 # *************************************************************************************** Show Admin Menu ***************************************** 
-@admin_only
-async def show_admin_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keyboard = [
-        [InlineKeyboardButton("➕ افزودن دسته‌بندی", callback_data='add_category')],
-        [InlineKeyboardButton("➕ افزودن سؤال", callback_data='add_question')],
-        [InlineKeyboardButton("➕ ایجاد آزمون", callback_data='create_exam')],
-        [InlineKeyboardButton("👥 مدیریت دسترسی کاربران", callback_data='manage_user_access')],
-        [InlineKeyboardButton("🔙 بازگشت به منوی اصلی", callback_data='start')]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
+# @admin_only
+# async def show_admin_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+#     keyboard = [
+#         [InlineKeyboardButton("➕ افزودن دسته‌بندی", callback_data='add_category')],
+#         [InlineKeyboardButton("➕ افزودن سؤال", callback_data='add_question')],
+#         [InlineKeyboardButton("➕ ایجاد آزمون", callback_data='create_exam')],
+#         [InlineKeyboardButton("👥 مدیریت دسترسی کاربران", callback_data='manage_user_access')],
+#         [InlineKeyboardButton("🔙 بازگشت به منوی اصلی", callback_data='start')]
+#     ]
+#     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    if update.callback_query:
-        await update.callback_query.edit_message_text(
-            "👨‍💼 پنل مدیریت\nلطفاً یک گزینه را انتخاب کنید:",
-            reply_markup=reply_markup
-        )
-    else:
-        await update.message.reply_text(
-            "👨‍💼 پنل مدیریت\nلطفاً یک گزینه را انتخاب کنید:",
-            reply_markup=reply_markup
-        )
+#     if update.callback_query:
+#         await update.callback_query.edit_message_text(
+#             "👨‍💼 پنل مدیریت\nلطفاً یک گزینه را انتخاب کنید:",
+#             reply_markup=reply_markup
+#         )
+#     else:
+#         await update.message.reply_text(
+#             "👨‍💼 پنل مدیریت\nلطفاً یک گزینه را انتخاب کنید:",
+#             reply_markup=reply_markup
+#         )
 
 # *************************************************************************************** Admin Start *****************************************
 @admin_only
@@ -442,6 +444,7 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
 #         reply_markup=reply_markup
 #     )
 #     return ConversationHandler.END
+
 
 # *************************************************************************************** Create Exam Start *****************************************
 async def create_exam_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
