@@ -1,3 +1,4 @@
+import traceback
 import logging
 import telegram
 from functools import wraps
@@ -35,20 +36,6 @@ logger = logging.getLogger(__name__)
 #             return ConversationHandler.END
 #         return await func(update, context, *args, **kwargs)
 #     return wrapped
-
-# *************************************************************************************** Help Command *****************************************
-
-async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    help_text = """
-    دستورات موجود:
-    /start - شروع کار با ربات
-    /help - نمایش این پیام راهنما
-    /exams - مشاهده لیست آزمون‌های موجود
-    /profile - مشاهده پروفایل کاربری
-    """
-    await update.message.reply_text(help_text)
-
-
 
 # ******************************************************  Start (Main Menu) *********************************************************************
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -669,44 +656,93 @@ async def show_category_exams(update: Update, context: ContextTypes.DEFAULT_TYPE
     )
     session.close()
 # *************************************************************************************** Show My Exam *****************************************
+# async def show_my_exams(update: Update, context: ContextTypes.DEFAULT_TYPE):
+#     query = update.callback_query
+#     await query.answer()
+    
+#     user_id = update.effective_user.id
+    
+#     session = Session()
+#     user_exams = session.query(UserExam).filter_by(user_id=user_id).all()
+    
+#     if not user_exams:
+#         await query.edit_message_text(
+#             "❌ شما هنوز در هیچ آزمونی شرکت نکرده‌اید.",
+#             reply_markup=InlineKeyboardMarkup([[
+#                 InlineKeyboardButton("🔙 بازگشت", callback_data='start')
+#             ]])
+#         )
+#         session.close()
+#         return
+    
+#     keyboard = []
+#     for user_exam in user_exams:
+#         exam = session.query(Exam).get(user_exam.exam_id)
+#         if exam:
+#             status = "✅ تکمیل شده" if user_exam.is_finished else "⏳ در حال انجام"
+#             score_text = f" - نمره: {user_exam.score}" if user_exam.is_finished else ""
+#             keyboard.append([InlineKeyboardButton(
+#                 f"📝 {exam.title} ({status}){score_text}",
+#                 callback_data=f'exam_{user_exam.id}'
+#             )])
+    
+#     keyboard.append([InlineKeyboardButton("🔙 بازگشت", callback_data='start')])
+#     reply_markup = InlineKeyboardMarkup(keyboard)
+    
+#     await query.edit_message_text(
+#         "🎯 آزمون‌های شما:",
+#         reply_markup=reply_markup
+#     )
+#     session.close()
+
 async def show_my_exams(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     
     user_id = update.effective_user.id
     
-    session = Session()
-    user_exams = session.query(UserExam).filter_by(user_id=user_id).all()
-    
-    if not user_exams:
+    try:
+        with Session() as session:
+            user_exams = session.query(UserExam).filter_by(user_id=user_id).all()
+            
+            if not user_exams:
+                await query.edit_message_text(
+                    "❌ شما هنوز در هیچ آزمونی شرکت نکرده‌اید.",
+                    reply_markup=InlineKeyboardMarkup([[
+                        InlineKeyboardButton("🔙 بازگشت", callback_data='start')
+                    ]])
+                )
+                return
+            
+            keyboard = []
+            for user_exam in user_exams:
+                exam = session.query(Exam).get(user_exam.exam_id)
+                if exam:
+                    status = "✅ تکمیل شده" if user_exam.is_finished else "⏳ در حال انجام"
+                    score_text = f" - نمره: {user_exam.score}" if user_exam.is_finished else ""
+                    keyboard.append([InlineKeyboardButton(
+                        f"📝 {exam.title} ({status}){score_text}",
+                        callback_data=f'exam_{exam.id}'  # تغییر از user_exam.id به exam.id
+                    )])
+            
+            keyboard.append([InlineKeyboardButton("🔙 بازگشت", callback_data='start')])
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
+            await query.edit_message_text(
+                "🎯 آزمون‌های شما:",
+                reply_markup=reply_markup
+            )
+            
+    except Exception as e:
+        logging.error(f"Error in show_my_exams: {str(e)}")
+        logging.error("Full traceback:", exc_info=True)
         await query.edit_message_text(
-            "❌ شما هنوز در هیچ آزمونی شرکت نکرده‌اید.",
+            "❌ خطایی رخ داد. لطفا دوباره تلاش کنید.",
             reply_markup=InlineKeyboardMarkup([[
                 InlineKeyboardButton("🔙 بازگشت", callback_data='start')
             ]])
         )
-        session.close()
-        return
-    
-    keyboard = []
-    for user_exam in user_exams:
-        exam = session.query(Exam).get(user_exam.exam_id)
-        if exam:
-            status = "✅ تکمیل شده" if user_exam.is_finished else "⏳ در حال انجام"
-            score_text = f" - نمره: {user_exam.score}" if user_exam.is_finished else ""
-            keyboard.append([InlineKeyboardButton(
-                f"📝 {exam.title} ({status}){score_text}",
-                callback_data=f'exam_{user_exam.id}'
-            )])
-    
-    keyboard.append([InlineKeyboardButton("🔙 بازگشت", callback_data='start')])
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    
-    await query.edit_message_text(
-        "🎯 آزمون‌های شما:",
-        reply_markup=reply_markup
-    )
-    session.close()
+
 
 # *************************************************************************************** Add Question Category *****************************************
 async def add_question_category(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -755,57 +791,41 @@ async def add_question_category(update: Update, context: ContextTypes.DEFAULT_TY
         )
         return ConversationHandler.END
 
-# *************************************************************************************** Show Exam Detail *****************************************
-# async def show_exam_details(update: Update, context: ContextTypes.DEFAULT_TYPE):
-#     query = update.callback_query
-#     await query.answer()
-    
-#     parts = query.data.split('_')
-#     if parts[0] == 'exam':
-#         if len(parts) > 2 and parts[1] == 'payment':
-#             exam_id = int(parts[2])
-#             return await show_payment_options(update, context)
-#         else:
-#             exam_id = int(parts[1])
-#     else:
-#         await query.edit_message_text("خطا: داده‌ی نامعتبر")
-#         return
+# *************************************************************************************** Start Exam Again *****************************************
 
-#     session = Session()
-#     exam = session.query(Exam).get(exam_id)
+async def start_exam_again(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
     
-#     if not exam:
-#         await query.edit_message_text("❌ آزمون مورد نظر یافت نشد.")
-#         session.close()
-#         return
-    
-#     price_text = f"{exam.price:,} تومان" if exam.price > 0 else "رایگان"
-#     exam_info = (
-#         f"📝 عنوان آزمون: {exam.title}\n"
-#         f"💰 قیمت: {price_text}\n"
-#     )
-    
-#     # اضافه کردن اطلاعات اضافی در صورت وجود
-#     if hasattr(exam, 'duration'):
-#         exam_info += f"⏱ مدت زمان: {exam.duration} دقیقه\n"
-#     if hasattr(exam, 'question_count'):
-#         exam_info += f"❓ تعداد سوالات: {exam.question_count}\n"
-#     if hasattr(exam, 'description'):
-#         exam_info += f"\n📜 توضیحات:\n{exam.description}"
-    
-#     keyboard = []
-#     if exam.price > 0:
-#         keyboard.append([InlineKeyboardButton("💳 پرداخت و شروع آزمون", callback_data=f'exam_payment_{exam_id}')])
-#     else:
-#         keyboard.append([InlineKeyboardButton("▶️ شروع آزمون", callback_data=f'start_exam_{exam_id}')])
-    
-#     keyboard.append([InlineKeyboardButton("🔙 بازگشت به لیست آزمون‌ها", callback_data=f'category_{exam.category_id}')])
-#     reply_markup = InlineKeyboardMarkup(keyboard)
-    
-#     await query.edit_message_text(exam_info, reply_markup=reply_markup)
-#     session.close()  
+    try:
+        exam_id = int(query.data.split('_')[2])
+        user_id = update.effective_user.id
+        
+        with Session() as session:
+            # ایجاد یک رکورد جدید در UserExam
+            new_user_exam = UserExam(
+                user_id=user_id,
+                exam_id=exam_id,
+                current_question=1,
+                is_finished=False,
+                score=0
+            )
+            session.add(new_user_exam)
+            session.commit()
+            
+            # شروع آزمون جدید
+            await show_question(update, context, new_user_exam.id, 1)
+            
+    except Exception as e:
+        logging.error(f"Error in start_exam_again: {str(e)}")
+        await query.edit_message_text(
+            "❌ خطایی رخ داد. لطفا دوباره تلاش کنید.",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("🔙 بازگشت", callback_data='my_exams')
+            ]])
+        )
      
-
+# *************************************************************************************** Show Exam Detail *****************************************
 async def show_exam_details(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -836,6 +856,7 @@ async def show_exam_details(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if existing_exam:
         if existing_exam.is_finished:
             score_text = f"\nنمره شما: {existing_exam.score}"
+            keyboard.append([InlineKeyboardButton("🔄 شرکت مجدد در آزمون", callback_data=f'start_exam_{exam_id}')])
             keyboard.append([InlineKeyboardButton("📊 مشاهده جزئیات", callback_data=f'result_{existing_exam.id}')])
         else:
             score_text = "\n⏳ آزمون ناتمام"
@@ -861,6 +882,107 @@ async def show_exam_details(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=reply_markup
     )
     session.close()
+
+# ***************************************************
+async def create_exam_keyboard(exam, existing_exam=None):
+    """ساخت کیبورد براساس وضعیت آزمون"""
+    keyboard = []
+    
+    if existing_exam:
+        if existing_exam.is_finished:
+            keyboard.append([
+                InlineKeyboardButton("📊 مشاهده جزئیات", 
+                                   callback_data=f'result_{existing_exam.id}')
+            ])
+        else:
+            keyboard.append([
+                InlineKeyboardButton("▶️ ادامه آزمون", 
+                                   callback_data=f'continue_{existing_exam.id}')
+            ])
+    else:
+        if exam.price > 0:
+            keyboard.append([
+                InlineKeyboardButton("💳 پرداخت و شروع آزمون", 
+                                   callback_data=f'pay_{exam.id}')
+            ])
+        else:
+            keyboard.append([
+                InlineKeyboardButton("▶️ شروع آزمون", 
+                                   callback_data=f'start_exam_{exam.id}')
+            ])
+    
+    keyboard.append([
+        InlineKeyboardButton("🔙 بازگشت", 
+                           callback_data=f'category_{exam.category_id}')
+    ])
+    return keyboard
+
+async def get_exam_status_text(existing_exam):
+    """دریافت متن وضعیت آزمون"""
+    if not existing_exam:
+        return ""
+    if existing_exam.is_finished:
+        return f"\nنمره شما: {existing_exam.score}"
+    return "\n⏳ آزمون ناتمام"
+
+# async def show_exam_details(update: Update, context: ContextTypes.DEFAULT_TYPE):
+#     query = update.callback_query
+#     await query.answer()
+    
+#     try:
+#         exam_id = int(query.data.split('_')[1])
+#         user_id = update.effective_user.id
+        
+#         with Session() as session:
+#             exam = session.query(Exam).get(exam_id)
+#             if not exam:
+#                 await query.edit_message_text(
+#                     "❌ آزمون مورد نظر یافت نشد.",
+#                     reply_markup=InlineKeyboardMarkup([[
+#                         InlineKeyboardButton("🔙 بازگشت", 
+#                                            callback_data='show_categories')
+#                     ]])
+#                 )
+#                 return
+
+#             existing_exam = session.query(UserExam).filter_by(
+#                 user_id=user_id,
+#                 exam_id=exam_id
+#             ).first()
+            
+#             category = session.query(Category).get(exam.category_id)
+            
+#             # ساخت کیبورد
+#             keyboard = await create_exam_keyboard(exam, existing_exam)
+#             reply_markup = InlineKeyboardMarkup(keyboard)
+            
+#             # دریافت متن وضعیت
+#             status_text = await get_exam_status_text(existing_exam)
+            
+#             # آماده‌سازی متن پیام
+#             price_text = f"{exam.price:,} تومان" if exam.price > 0 else "رایگان"
+#             message_text = (
+#                 f"📝 {exam.title}\n"
+#                 f"📚 دسته‌بندی: {category.name}\n"
+#                 f"💰 قیمت: {price_text}\n"
+#                 f"❓ تعداد سؤالات: {exam.question_count}{status_text}"
+#             )
+            
+#             await query.edit_message_text(
+#                 message_text,
+#                 reply_markup=reply_markup
+#             )
+            
+#     except Exception as e:
+#         logging.error(f"Error in show_exam_details: {str(e)}")
+#         await query.edit_message_text(
+#             "❌ خطایی رخ داد. لطفا دوباره تلاش کنید.",
+#             reply_markup=InlineKeyboardMarkup([[
+#                 InlineKeyboardButton("🔙 بازگشت", 
+#                                    callback_data='show_categories')
+#             ]])
+#         )
+
 
 # *************************************************************************************** Start Exam *****************************************
 async def start_exam(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1241,7 +1363,6 @@ def main():
     application.add_handler(CallbackQueryHandler(continue_exam, pattern='^continue_'))
     application.add_handler(CallbackQueryHandler(handle_answer, pattern='^ans_'))
     application.add_handler(CallbackQueryHandler(show_exam_result, pattern='^result_'))
-    application.add_handler(CommandHandler("help", help_command))
     
     application.add_handler(CallbackQueryHandler(show_payment_options, pattern='^pay_'))
     application.add_handler(CallbackQueryHandler(show_bank_account, pattern='^bank_transfer_'))
@@ -1251,6 +1372,7 @@ def main():
     application.add_handler(CallbackQueryHandler(show_exam_details, pattern=r'^exam_'))
     application.add_handler(CallbackQueryHandler(show_payment_options, pattern=r'^exam_payment_'))
     application.add_handler(CallbackQueryHandler(show_bank_account, pattern=r'^bank_transfer_'))
+    application.add_handler(CallbackQueryHandler(start_exam_again, pattern='^start_exam_'))
     
  
     

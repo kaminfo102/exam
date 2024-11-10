@@ -19,7 +19,7 @@ from config import BOT_TOKEN, ZARINPAL_MERCHANT,ADMIN_IDS
 
 
 
-
+# $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$ کنترل کاربر ادمین  $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 def admin_only(func):
     @wraps(func)
     async def wrapped(update: Update, context: ContextTypes.DEFAULT_TYPE, *args, **kwargs):
@@ -61,6 +61,7 @@ async def back_to_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return ConversationHandler.END
     return ConversationHandler.END
 
+# $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$ ایجاد سوال  $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 # *************************************************************************************** Add Question Image *****************************************
 async def add_question_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.callback_query and update.callback_query.data == 'admin_menu':
@@ -204,3 +205,5 @@ async def add_question_category(update: Update, context: ContextTypes.DEFAULT_TY
         reply_markup=reply_markup
     )
     return ConversationHandler.END
+
+# $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$   $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
