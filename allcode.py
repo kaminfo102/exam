@@ -13,9 +13,9 @@ from sqlalchemy import func
 from database import Session, Category, Question, Exam, UserExam, ExamQuestion
 from config import BOT_TOKEN, ZARINPAL_MERCHANT,ADMIN_IDS
 
-from handller import (add_question_image,add_question_option_a,add_question_option_b,add_question_option_c,add_question_option_d,add_question_correct,add_question_category,admin_only,show_admin_menu,back_to_admin
-      ,add_question_title,add_question_start,show_category_exams,show_categories,create_exam_finish,create_exam_question_count,create_exam_price,create_exam_title,
-      create_exam_start,cancel,add_category_finish,add_category_start)
+# from handller import (add_question_image,add_question_option_a,add_question_option_b,add_question_option_c,add_question_option_d,add_question_correct,add_question_category,admin_only,show_admin_menu,back_to_admin
+#       ,add_question_title,add_question_start,show_category_exams,show_categories,create_exam_finish,create_exam_question_count,create_exam_price,create_exam_title,
+#       create_exam_start,cancel,add_category_finish,add_category_start)
 
 
 # Setup logging
@@ -29,6 +29,37 @@ logger = logging.getLogger(__name__)
  EXAM_TITLE, EXAM_PRICE, EXAM_QUESTION_COUNT, EXAM_CATEGORY) = range(13)
 
 
+def admin_only(func):
+    @wraps(func)
+    async def wrapped(update: Update, context: ContextTypes.DEFAULT_TYPE, *args, **kwargs):
+        user_id = update.effective_user.id
+        if user_id not in ADMIN_IDS:
+            await update.message.reply_text("⛔️ شما دسترسی به این عملکرد را ندارید.")
+            return ConversationHandler.END
+        return await func(update, context, *args, **kwargs)
+    return wrapped
+
+@admin_only
+async def show_admin_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    keyboard = [
+        [InlineKeyboardButton("➕ افزودن دسته‌بندی", callback_data='add_category')],
+        [InlineKeyboardButton("➕ افزودن سؤال", callback_data='add_question')],
+        [InlineKeyboardButton("➕ ایجاد آزمون", callback_data='create_exam')],
+        [InlineKeyboardButton("👥 مدیریت دسترسی کاربران", callback_data='manage_user_access')],
+        [InlineKeyboardButton("🔙 بازگشت به منوی اصلی", callback_data='start')]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    if update.callback_query:
+        await update.callback_query.edit_message_text(
+            "👨‍💼 پنل مدیریت\nلطفاً یک گزینه را انتخاب کنید:",
+            reply_markup=reply_markup
+        )
+    else:
+        await update.message.reply_text(
+            "👨‍💼 پنل مدیریت\nلطفاً یک گزینه را انتخاب کنید:",
+            reply_markup=reply_markup
+        )
 
 # ******************************************************  Start (Main Menu) *********************************************************************
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -171,53 +202,136 @@ async def admin_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return await show_admin_menu(update, context)
 
 # *************************************************************************************** Show My Exam *****************************************
+# async def show_my_exams(update: Update, context: ContextTypes.DEFAULT_TYPE):
+#     query = update.callback_query
+#     await query.answer()
+    
+#     user_id = update.effective_user.id
+    
+#     try:
+#         with Session() as session:
+#             user_exams = session.query(UserExam).filter_by(user_id=user_id).all()
+            
+#             if not user_exams:
+#                 await query.edit_message_text(
+#                     "❌ شما هنوز در هیچ آزمونی شرکت نکرده‌اید.",
+#                     reply_markup=InlineKeyboardMarkup([[
+#                         InlineKeyboardButton("🔙 بازگشت", callback_data='start')
+#                     ]])
+#                 )
+#                 return
+            
+#             keyboard = []
+#             for user_exam in user_exams:
+#                 exam = session.query(Exam).get(user_exam.exam_id)
+#                 if exam:
+#                     status = "✅ تکمیل شده" if user_exam.is_finished else "⏳ در حال انجام"
+#                     score_text = f" - نمره: {user_exam.score}" if user_exam.is_finished else ""
+#                     keyboard.append([InlineKeyboardButton(
+#                         f"📝 {exam.title} ({status}){score_text}",
+#                         callback_data=f'exam_{exam.id}'  # تغییر از user_exam.id به exam.id
+#                     )])
+            
+#             keyboard.append([InlineKeyboardButton("🔙 بازگشت", callback_data='start')])
+#             reply_markup = InlineKeyboardMarkup(keyboard)
+            
+#             await query.edit_message_text(
+#                 "🎯 آزمون‌های شما:",
+#                 reply_markup=reply_markup
+#             )
+            
+#     except Exception as e:
+#         logging.error(f"Error in show_my_exams: {str(e)}")
+#         logging.error("Full traceback:", exc_info=True)
+#         await query.edit_message_text(
+#             "❌ خطایی رخ داد. لطفا دوباره تلاش کنید.",
+#             reply_markup=InlineKeyboardMarkup([[
+#                 InlineKeyboardButton("🔙 بازگشت", callback_data='start')
+#             ]])
+#         )
+
 async def show_my_exams(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     
     user_id = update.effective_user.id
+    session = Session()
     
     try:
-        with Session() as session:
-            user_exams = session.query(UserExam).filter_by(user_id=user_id).all()
-            
-            if not user_exams:
-                await query.edit_message_text(
-                    "❌ شما هنوز در هیچ آزمونی شرکت نکرده‌اید.",
-                    reply_markup=InlineKeyboardMarkup([[
-                        InlineKeyboardButton("🔙 بازگشت", callback_data='start')
-                    ]])
-                )
-                return
-            
-            keyboard = []
-            for user_exam in user_exams:
-                exam = session.query(Exam).get(user_exam.exam_id)
-                if exam:
-                    status = "✅ تکمیل شده" if user_exam.is_finished else "⏳ در حال انجام"
-                    score_text = f" - نمره: {user_exam.score}" if user_exam.is_finished else ""
-                    keyboard.append([InlineKeyboardButton(
-                        f"📝 {exam.title} ({status}){score_text}",
-                        callback_data=f'exam_{exam.id}'  # تغییر از user_exam.id به exam.id
-                    )])
-            
-            keyboard.append([InlineKeyboardButton("🔙 بازگشت", callback_data='start')])
-            reply_markup = InlineKeyboardMarkup(keyboard)
-            
+        # ابتدا همه آزمون‌های کاربر را دریافت می‌کنیم
+        user_exams = (
+            session.query(
+                UserExam.exam_id,
+                func.max(UserExam.id).label('latest_attempt'),
+                func.count(UserExam.id).label('attempt_count')
+            )
+            .filter(UserExam.user_id == user_id)
+            .group_by(UserExam.exam_id)
+            .all()
+        )
+
+        if not user_exams:
             await query.edit_message_text(
-                "🎯 آزمون‌های شما:",
-                reply_markup=reply_markup
+                "❌ شما هنوز در هیچ آزمونی شرکت نکرده‌اید.",
+                reply_markup=InlineKeyboardMarkup([[
+                    InlineKeyboardButton("🔙 بازگشت", callback_data='start')
+                ]])
+            )
+            return
+
+        keyboard = []
+        for exam_info in user_exams:
+            # دریافت اطلاعات آخرین تلاش
+            latest_attempt = (
+                session.query(UserExam)
+                .filter(UserExam.id == exam_info.latest_attempt)
+                .first()
             )
             
+            # دریافت اطلاعات آزمون
+            exam = session.query(Exam).get(exam_info.exam_id)
+            
+            if not exam or not latest_attempt:
+                continue
+
+            # تنظیم متن وضعیت
+            status = "✅ تکمیل شده" if latest_attempt.is_finished else "⏳ ناتمام"
+            score_text = f" - نمره: {latest_attempt.score}%" if latest_attempt.is_finished else ""
+            
+            exam_text = (
+                f"📝 {exam.title} | {status}{score_text}\n"
+                f"🔄 تعداد تلاش: {exam_info.attempt_count}"
+            )
+            
+            keyboard.append([
+                InlineKeyboardButton(
+                    exam_text,
+                    callback_data=f'exam_details_{exam.id}'
+                )
+            ])
+
+        keyboard.append([InlineKeyboardButton("🔙 بازگشت", callback_data='start')])
+        
+        await query.edit_message_text(
+            "🎯 لیست آزمون‌های شما:",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+
     except Exception as e:
-        logging.error(f"Error in show_my_exams: {str(e)}")
-        logging.error("Full traceback:", exc_info=True)
+        logging.error(f"Error in show_my_exams for user {user_id}: {str(e)}")
+        # چاپ جزئیات خطا در لاگ
+        import traceback
+        logging.error(traceback.format_exc())
+        
         await query.edit_message_text(
             "❌ خطایی رخ داد. لطفا دوباره تلاش کنید.",
             reply_markup=InlineKeyboardMarkup([[
                 InlineKeyboardButton("🔙 بازگشت", callback_data='start')
             ]])
         )
+    finally:
+        session.close()
+
 # *************************************************************************************** Add Question Category *****************************************
 async def add_question_category(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -297,6 +411,8 @@ async def start_exam_again(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ]])
         ) 
 # *************************************************************************************** Show Exam Detail *****************************************
+
+
 # async def show_exam_details(update: Update, context: ContextTypes.DEFAULT_TYPE):
 #     query = update.callback_query
 #     await query.answer()
@@ -305,54 +421,76 @@ async def start_exam_again(update: Update, context: ContextTypes.DEFAULT_TYPE):
 #     user_id = update.effective_user.id
     
 #     session = Session()
-#     exam = session.query(Exam).get(exam_id)
-    
-#     if not exam:
+#     try:
+#         exam = session.query(Exam).get(exam_id)
+        
+#         if not exam:
+#             await query.edit_message_text(
+#                 "❌ آزمون مورد نظر یافت نشد.",
+#                 reply_markup=InlineKeyboardMarkup([[
+#                     InlineKeyboardButton("🔙 بازگشت", callback_data='show_categories')
+#                 ]])
+#             )
+#             return
+
+#         # دریافت آخرین تلاش کاربر با مرتب‌سازی بر اساس ID (به صورت نزولی)
+#         existing_exam = (
+#             session.query(UserExam)
+#             .filter_by(user_id=user_id, exam_id=exam_id)
+#             .order_by(UserExam.id.desc())
+#             .first()
+#         )
+        
+#         # محاسبه تعداد دفعات شرکت در آزمون
+#         attempt_count = (
+#             session.query(UserExam)
+#             .filter_by(user_id=user_id, exam_id=exam_id)
+#             .count()
+#         )
+        
+#         keyboard = []
+#         if existing_exam:
+#             if existing_exam.is_finished:
+#                 score_text = f"\nنمره شما: {existing_exam.score}"
+#                 keyboard.append([InlineKeyboardButton("🔄 شرکت مجدد در آزمون", callback_data=f'start_exam_{exam_id}')])
+#                 keyboard.append([InlineKeyboardButton("📊 مشاهده جزئیات", callback_data=f'result_{existing_exam.id}')])
+#             else:
+#                 score_text = "\n⏳ آزمون ناتمام"
+#                 keyboard.append([InlineKeyboardButton("▶️ ادامه آزمون", callback_data=f'continue_{existing_exam.id}')])
+#         else:
+#             score_text = ""
+#             if exam.price > 0:
+#                 keyboard.append([InlineKeyboardButton("💳 پرداخت و شروع آزمون", callback_data=f'pay_{exam_id}')])
+#             else:
+#                 keyboard.append([InlineKeyboardButton("▶️ شروع آزمون", callback_data=f'start_exam_{exam_id}')])
+
+#         category = session.query(Category).get(exam.category_id)
+#         price_text = f"{exam.price:,} تومان" if exam.price > 0 else "رایگان"
+#         attempts_text = f"\n🔄 تعداد دفعات شرکت: {attempt_count}" if attempt_count > 0 else ""
+        
+#         keyboard.append([InlineKeyboardButton("🔙 بازگشت", callback_data=f'category_{exam.category_id}')])
+#         reply_markup = InlineKeyboardMarkup(keyboard)
+        
 #         await query.edit_message_text(
-#             "❌ آزمون مورد نظر یافت نشد.",
+#             f"📝 {exam.title}\n"
+#             f"📚 دسته‌بندی: {category.name}\n"
+#             f"💰 قیمت: {price_text}\n"
+#             f"❓ تعداد سؤالات: {exam.question_count}"
+#             f"{attempts_text}"
+#             f"{score_text}",
+#             reply_markup=reply_markup
+#         )
+        
+#     except Exception as e:
+#         logging.error(f"Error in show_exam_details: {str(e)}")
+#         await query.edit_message_text(
+#             "❌ خطایی رخ داد. لطفا دوباره تلاش کنید.",
 #             reply_markup=InlineKeyboardMarkup([[
 #                 InlineKeyboardButton("🔙 بازگشت", callback_data='show_categories')
 #             ]])
 #         )
+#     finally:
 #         session.close()
-#         return
-
-#     # بررسی آزمون‌های قبلی کاربر
-#     existing_exam = session.query(UserExam).filter_by(
-#         user_id=user_id,
-#         exam_id=exam_id
-#     ).first()
-    
-#     keyboard = []
-#     if existing_exam:
-#         if existing_exam.is_finished:
-#             score_text = f"\nنمره شما: {existing_exam.score}"
-#             keyboard.append([InlineKeyboardButton("🔄 شرکت مجدد در آزمون", callback_data=f'start_exam_{exam_id}')])
-#             keyboard.append([InlineKeyboardButton("📊 مشاهده جزئیات", callback_data=f'result_{existing_exam.id}')])
-#         else:
-#             score_text = "\n⏳ آزمون ناتمام"
-#             keyboard.append([InlineKeyboardButton("▶️ ادامه آزمون", callback_data=f'continue_{existing_exam.id}')])
-#     else:
-#         score_text = ""
-#         if exam.price > 0:
-#             keyboard.append([InlineKeyboardButton("💳 پرداخت و شروع آزمون", callback_data=f'pay_{exam_id}')])
-#         else:
-#             keyboard.append([InlineKeyboardButton("▶️ شروع آزمون", callback_data=f'start_exam_{exam_id}')])
-
-#     category = session.query(Category).get(exam.category_id)
-#     price_text = f"{exam.price:,} تومان" if exam.price > 0 else "رایگان"
-    
-#     keyboard.append([InlineKeyboardButton("🔙 بازگشت", callback_data=f'category_{exam.category_id}')])
-#     reply_markup = InlineKeyboardMarkup(keyboard)
-    
-#     await query.edit_message_text(
-#         f"📝 {exam.title}\n"
-#         f"📚 دسته‌بندی: {category.name}\n"
-#         f"💰 قیمت: {price_text}\n"
-#         f"❓ تعداد سؤالات: {exam.question_count}{score_text}",
-#         reply_markup=reply_markup
-#     )
-#     session.close()
 
 async def show_exam_details(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -731,6 +869,505 @@ async def show_payment_options(update: Update, context: ContextTypes.DEFAULT_TYP
         reply_markup=reply_markup
     )
     session.close()
+    
+    
+def admin_only(func):
+    @wraps(func)
+    async def wrapped(update: Update, context: ContextTypes.DEFAULT_TYPE, *args, **kwargs):
+        user_id = update.effective_user.id
+        if user_id not in ADMIN_IDS:
+            await update.message.reply_text("⛔️ شما دسترسی به این عملکرد را ندارید.")
+            return ConversationHandler.END
+        return await func(update, context, *args, **kwargs)
+    return wrapped
+
+@admin_only
+async def show_admin_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    keyboard = [
+        [InlineKeyboardButton("➕ افزودن دسته‌بندی", callback_data='add_category')],
+        [InlineKeyboardButton("➕ افزودن سؤال", callback_data='add_question')],
+        [InlineKeyboardButton("➕ ایجاد آزمون", callback_data='create_exam')],
+        [InlineKeyboardButton("👥 مدیریت دسترسی کاربران", callback_data='manage_user_access')],
+        [InlineKeyboardButton("🔙 بازگشت به منوی اصلی", callback_data='start')]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    if update.callback_query:
+        await update.callback_query.edit_message_text(
+            "👨‍💼 پنل مدیریت\nلطفاً یک گزینه را انتخاب کنید:",
+            reply_markup=reply_markup
+        )
+    else:
+        await update.message.reply_text(
+            "👨‍💼 پنل مدیریت\nلطفاً یک گزینه را انتخاب کنید:",
+            reply_markup=reply_markup
+        )
+
+# *************************************************************************************** Back To Admin *****************************************
+@admin_only
+async def back_to_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    if query:
+        await query.answer()
+        await show_admin_menu(update, context)
+        return ConversationHandler.END
+    return ConversationHandler.END
+
+# $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$ ایجاد سوال  $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+# *************************************************************************************** Add Question Image *****************************************
+async def add_question_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.callback_query and update.callback_query.data == 'admin_menu':
+        return await back_to_admin(update, context)
+        
+    context.user_data['question_image'] = update.message.text
+    
+    keyboard = [[InlineKeyboardButton("🔙 بازگشت به پنل ادمین", callback_data='admin_menu')]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await update.message.reply_text(
+        "📝 لطفاً گزینه A را وارد کنید:",
+        reply_markup=reply_markup
+    )
+    return QUESTION_OPTION_A
+# *************************************************************************************** Add Question Option A *****************************************
+async def add_question_option_a(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.callback_query and update.callback_query.data == 'admin_menu':
+        return await back_to_admin(update, context)
+        
+    context.user_data['option_a'] = update.message.text
+    
+    keyboard = [[InlineKeyboardButton("🔙 بازگشت به پنل ادمین", callback_data='admin_menu')]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await update.message.reply_text(
+        "📝 لطفاً گزینه B را وارد کنید:",
+        reply_markup=reply_markup
+    )
+    return QUESTION_OPTION_B
+# *************************************************************************************** Add Question Option B *****************************************
+async def add_question_option_b(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.callback_query and update.callback_query.data == 'admin_menu':
+        return await back_to_admin(update, context)
+        
+    context.user_data['option_b'] = update.message.text
+    
+    keyboard = [[InlineKeyboardButton("🔙 بازگشت به پنل ادمین", callback_data='admin_menu')]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await update.message.reply_text(
+        "📝 لطفاً گزینه C را وارد کنید:",
+        reply_markup=reply_markup
+    )
+    return QUESTION_OPTION_C
+# *************************************************************************************** Add Question Option C *****************************************
+async def add_question_option_c(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.callback_query and update.callback_query.data == 'admin_menu':
+        return await back_to_admin(update, context)
+        
+    context.user_data['option_c'] = update.message.text
+    
+    keyboard = [[InlineKeyboardButton("🔙 بازگشت به پنل ادمین", callback_data='admin_menu')]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await update.message.reply_text(
+        "📝 لطفاً گزینه D را وارد کنید:",
+        reply_markup=reply_markup
+    )
+    return QUESTION_OPTION_D
+# *************************************************************************************** Add Question Option D *****************************************
+async def add_question_option_d(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.callback_query and update.callback_query.data == 'admin_menu':
+        return await back_to_admin(update, context)
+        
+    context.user_data['option_d'] = update.message.text
+    
+    keyboard = [[InlineKeyboardButton("🔙 بازگشت به پنل ادمین", callback_data='admin_menu')]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await update.message.reply_text(
+        "📝 لطفاً گزینه صحیح را وارد کنید (A, B, C یا D):",
+        reply_markup=reply_markup
+    )
+    return QUESTION_CORRECT
+
+# *************************************************************************************** Add Question Currect *****************************************
+async def add_question_correct(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.callback_query and update.callback_query.data == 'admin_menu':
+        return await back_to_admin(update, context)
+        
+    correct_answer = update.message.text.upper()
+    if correct_answer not in ['A', 'B', 'C', 'D']:
+        await update.message.reply_text("❌ لطفاً یکی از گزینه‌های A، B، C یا D را وارد کنید.")
+        return QUESTION_CORRECT
+        
+    context.user_data['correct_answer'] = correct_answer
+    
+    session = Session()
+    categories = session.query(Category).all()
+    session.close()
+    
+    keyboard = []
+    for category in categories:
+        keyboard.append([InlineKeyboardButton(
+            category.name, 
+            callback_data=f'qcat_{category.id}'
+        )])
+    keyboard.append([InlineKeyboardButton("🔙 بازگشت به پنل ادمین", callback_data='admin_menu')])
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await update.message.reply_text(
+        "📂 لطفاً دسته‌بندی سؤال را انتخاب کنید:",
+        reply_markup=reply_markup
+    )
+    return QUESTION_CATEGORY
+
+# *************************************************************************************** Add Question Category *****************************************
+async def add_question_category(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    
+    if query.data == 'admin_menu':
+        return await back_to_admin(update, context)
+        
+    category_id = int(query.data.split('_')[1])
+    
+    session = Session()
+    new_question = Question(
+        title=context.user_data['question_title'],
+        image_url=context.user_data['question_image'] if context.user_data['question_image'] != '0' else None,
+        option_a=context.user_data['option_a'],
+        option_b=context.user_data['option_b'],
+        option_c=context.user_data['option_c'],
+        option_d=context.user_data['option_d'],
+        correct_answer=context.user_data['correct_answer'],
+        category_id=category_id
+    )
+    session.add(new_question)
+    session.commit()
+    session.close()
+    
+    # پاک کردن داده‌های ذخیره شده
+    context.user_data.clear()
+    
+    keyboard = [[InlineKeyboardButton("🔙 بازگشت به پنل ادمین", callback_data='admin_menu')]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await query.edit_message_text(
+        "✅ سؤال با موفقیت اضافه شد.",
+        reply_markup=reply_markup
+    )
+    return ConversationHandler.END
+
+# *************************************************************************************** Add Question Start *****************************************
+async def add_question_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    
+    keyboard = [[InlineKeyboardButton("🔙 بازگشت به پنل ادمین", callback_data='admin_menu')]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await query.edit_message_text(
+        "📝 لطفاً متن سؤال را وارد کنید:",
+        reply_markup=reply_markup
+    )
+    return QUESTION_TITLE
+# *************************************************************************************** Add Question Title *****************************************
+async def add_question_title(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.callback_query and update.callback_query.data == 'admin_menu':
+        return await back_to_admin(update, context)
+        
+    context.user_data['question_title'] = update.message.text
+    
+    keyboard = [[InlineKeyboardButton("🔙 بازگشت به پنل ادمین", callback_data='admin_menu')]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await update.message.reply_text(
+        "🖼 لطفاً لینک تصویر سؤال را وارد کنید\n"
+        "(اگر تصویر ندارد، عدد 0 را وارد کنید):",
+        reply_markup=reply_markup
+    )
+    return QUESTION_IMAGE
+
+# *************************************************************************************** Add Category Finish *****************************************
+async def add_category_finish(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.callback_query and update.callback_query.data == 'admin_menu':
+        return await back_to_admin(update, context)
+        
+    category_name = update.message.text
+    session = Session()
+    new_category = Category(name=category_name)
+    session.add(new_category)
+    session.commit()
+    session.close()
+    
+    keyboard = [[InlineKeyboardButton("🔙 بازگشت به پنل ادمین", callback_data='admin_menu')]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await update.message.reply_text(
+        f"✅ دسته‌بندی '{category_name}' با موفقیت اضافه شد.",
+        reply_markup=reply_markup
+    )
+    return ConversationHandler.END
+
+# *************************************************************************************** Add Category Start *****************************************
+async def add_category_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    
+    keyboard = [[InlineKeyboardButton("🔙 بازگشت به پنل ادمین", callback_data='admin_menu')]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await query.edit_message_text(
+        "📝 لطفاً نام دسته‌بندی جدید را وارد کنید:",
+        reply_markup=reply_markup
+    )
+    return CATEGORY_NAME
+# *************************************************************************************** Cancel *****************************************
+async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """لغو عملیات و برگشت به منوی اصلی"""
+    keyboard = [[InlineKeyboardButton("🔙 بازگشت به پنل ادمین", callback_data='admin_menu')]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    if update.callback_query:
+        await update.callback_query.edit_message_text(
+            "❌ عملیات لغو شد.",
+            reply_markup=reply_markup
+        )
+    else:
+        await update.message.reply_text(
+            "❌ عملیات لغو شد.",
+            reply_markup=reply_markup
+        )
+    return ConversationHandler.END
+# *************************************************************************************** Create Exam Start *****************************************
+async def create_exam_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    
+    keyboard = [[InlineKeyboardButton("🔙 بازگشت به پنل ادمین", callback_data='admin_menu')]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await query.edit_message_text(
+        "📝 لطفاً عنوان آزمون را وارد کنید:",
+        reply_markup=reply_markup
+    )
+    return EXAM_TITLE
+# *************************************************************************************** Create Exam Title *****************************************
+async def create_exam_title(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.callback_query and update.callback_query.data == 'admin_menu':
+        return await back_to_admin(update, context)
+        
+    context.user_data['exam_title'] = update.message.text
+    
+    keyboard = [[InlineKeyboardButton("🔙 بازگشت به پنل ادمین", callback_data='admin_menu')]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await update.message.reply_text(
+        "💰 لطفاً قیمت آزمون را به تومان وارد کنید:\n"
+        "(برای آزمون رایگان عدد 0 را وارد کنید)",
+        reply_markup=reply_markup
+    )
+    return EXAM_PRICE
+# *************************************************************************************** Create Exam Price *****************************************
+async def create_exam_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.callback_query and update.callback_query.data == 'admin_menu':
+        return await back_to_admin(update, context)
+        
+    try:
+        price = int(update.message.text)
+        if price < 0:
+            raise ValueError
+        context.user_data['exam_price'] = price
+    except ValueError:
+        await update.message.reply_text("❌ لطفاً یک عدد صحیح مثبت وارد کنید.")
+        return EXAM_PRICE
+    
+    keyboard = [[InlineKeyboardButton("🔙 بازگشت به پنل ادمین", callback_data='admin_menu')]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await update.message.reply_text(
+        "🔢 لطفاً تعداد سؤالات آزمون را وارد کنید:",
+        reply_markup=reply_markup
+    )
+    return EXAM_QUESTION_COUNT
+# *************************************************************************************** Create Exam Question Count *****************************************
+async def create_exam_question_count(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.callback_query and update.callback_query.data == 'admin_menu':
+        return await back_to_admin(update, context)
+        
+    try:
+        question_count = int(update.message.text)
+        if question_count <= 0:
+            raise ValueError
+        context.user_data['question_count'] = question_count
+    except ValueError:
+        await update.message.reply_text("❌ لطفاً یک عدد صحیح مثبت وارد کنید.")
+        return EXAM_QUESTION_COUNT
+    
+    session = Session()
+    categories = session.query(Category).all()
+    session.close()
+    
+    keyboard = []
+    for category in categories:
+        keyboard.append([InlineKeyboardButton(
+            category.name, 
+            callback_data=f'ecat_{category.id}'
+        )])
+    keyboard.append([InlineKeyboardButton("🔙 بازگشت به پنل ادمین", callback_data='admin_menu')])
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await update.message.reply_text(
+        "📂 لطفاً دسته‌بندی آزمون را انتخاب کنید:",
+        reply_markup=reply_markup
+    )
+    return EXAM_CATEGORY
+# *************************************************************************************** Create Exam Finish *****************************************
+async def create_exam_finish(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    
+    if query.data == 'admin_menu':
+        return await back_to_admin(update, context)
+        
+    category_id = int(query.data.split('_')[1])
+    
+    session = Session()
+    # بررسی تعداد سؤالات موجود در دسته‌بندی
+    available_questions = session.query(func.count(Question.id))\
+        .filter_by(category_id=category_id)\
+        .scalar()
+    
+    if available_questions < context.user_data['question_count']:
+        await query.edit_message_text(
+            f"❌ تعداد سؤالات موجود در این دسته‌بندی ({available_questions} سؤال) "
+            f"کمتر از تعداد درخواستی ({context.user_data['question_count']} سؤال) است.",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("🔙 بازگشت به پنل ادمین", callback_data='admin_menu')
+            ]])
+        )
+        session.close()
+        return ConversationHandler.END
+    
+    # ایجاد آزمون جدید
+    new_exam = Exam(
+        title=context.user_data['exam_title'],
+        price=context.user_data['exam_price'],
+        question_count=context.user_data['question_count'],
+        category_id=category_id
+    )
+    session.add(new_exam)
+    session.commit()
+    
+    # انتخاب تصادفی سؤالات
+    questions = session.query(Question)\
+        .filter_by(category_id=category_id)\
+        .order_by(func.random())\
+        .limit(context.user_data['question_count'])\
+        .all()
+    
+    # اضافه کردن سؤالات به آزمون
+    for question in questions:
+        exam_question = ExamQuestion(
+            exam_id=new_exam.id,
+            question_id=question.id
+        )
+        session.add(exam_question)
+    
+    session.commit()
+    session.close()
+    
+    # پاک کردن داده‌های ذخیره شده
+    context.user_data.clear()
+    
+    keyboard = [[InlineKeyboardButton("🔙 بازگشت به پنل ادمین", callback_data='admin_menu')]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await query.edit_message_text(
+        "✅ آزمون با موفقیت ایجاد شد.",
+        reply_markup=reply_markup
+    )
+    return ConversationHandler.END
+
+# *************************************************************************************** Show Categories *****************************************
+async def show_categories(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    
+    session = Session()
+    categories = session.query(Category).all()
+    
+    if not categories:
+        await query.edit_message_text(
+            "❌ هیچ دسته‌بندی موجود نیست.",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("🔙 بازگشت", callback_data='start')
+            ]])
+        )
+        session.close()
+        return
+    
+    keyboard = []
+    # نمایش آزمون‌های هر دسته
+    for category in categories:
+        exams = session.query(Exam).filter_by(category_id=category.id).count()
+        keyboard.append([InlineKeyboardButton(
+            f"📚 {category.name} ({exams} آزمون)",
+            callback_data=f'category_{category.id}'
+        )])
+    
+    keyboard.append([InlineKeyboardButton("🔙 بازگشت", callback_data='start')])
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await query.edit_message_text(
+        "📚 دسته‌بندی‌های موجود:",
+        reply_markup=reply_markup
+    )
+    session.close()
+# *************************************************************************************** Show Category Exam *****************************************
+async def show_category_exams(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    
+    category_id = int(query.data.split('_')[1])
+    
+    session = Session()
+    category = session.query(Category).get(category_id)
+    exams = session.query(Exam).filter_by(category_id=category_id).all()
+    
+    if not exams:
+        await query.edit_message_text(
+            f"❌ هیچ آزمونی در دسته‌بندی {category.name} موجود نیست.",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("🔙 بازگشت به دسته‌ها", callback_data='show_categories')
+            ]])
+        )
+        session.close()
+        return
+    
+    keyboard = []
+    for exam in exams:
+        price_text = f"{exam.price:,} تومان" if exam.price > 0 else "رایگان"
+        keyboard.append([InlineKeyboardButton(
+            f"📝 {exam.title} ({price_text})",
+            callback_data=f'exam_{exam.id}'
+        )])
+    
+    keyboard.append([InlineKeyboardButton("🔙 بازگشت به دسته‌ها", callback_data='show_categories')])
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await query.edit_message_text(
+        f"📚 آزمون‌های دسته‌بندی {category.name}:",
+        reply_markup=reply_markup
+    )
+    session.close()
+
+# $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$   $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+    
+    
+    
+    
+    
     
 def main():
     application = Application.builder().token(BOT_TOKEN).build()

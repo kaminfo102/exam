@@ -73,10 +73,12 @@ class UserExam(Base):
     score = Column(Float, default=0)
     is_finished = Column(Boolean, default=False)
     is_paid = Column(Boolean, default=False)
-    
+    finish_time = Column(DateTime, nullable=True)
     # تعریف رابطه‌ها
     exam = relationship("Exam", back_populates="user_exams")
     payment = relationship("Payment", back_populates="user_exam", uselist=False)
+    
+
 
 class Payment(Base):
     __tablename__ = 'payments'
