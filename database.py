@@ -29,6 +29,7 @@ class Question(Base):
     option_d = Column(String(200), nullable=False)
     correct_answer = Column(String(1), nullable=False)
     category_id = Column(Integer, ForeignKey('categories.id'), nullable=False)
+    exam_id = Column(Integer, ForeignKey('exams.id', ondelete='CASCADE'), nullable=True)
     
     # تعریف رابطه‌ها
     category = relationship("Category", back_populates="questions")

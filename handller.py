@@ -19,8 +19,8 @@ from config import BOT_TOKEN, ZARINPAL_MERCHANT,ADMIN_IDS
 
 
 
-#$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$ کنترل کاربر ادمین  $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
-#****************************   ADMIN CONTROLLER ********************************************
+
+#**********************************************************************   ADMIN CONTROLLER ****************************************************
 
 def admin_only(func):
     @wraps(func)
@@ -64,7 +64,58 @@ async def back_to_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return ConversationHandler.END
     return ConversationHandler.END
 
-# $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$ ایجاد سوال  $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+# *************************************************************************************** Admin Start *********************************************
+@admin_only
+async def admin_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    return await show_admin_menu(update, context)
+
+# *************************************************************************************** Add Question Category *****************************************
+async def add_question_category(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    
+    if query.data == 'admin_menu':
+        return await back_to_admin(update, context)
+    
+    try:
+        category_id = int(query.data.split('_')[1])
+        
+        session = Session()
+        new_question = Question(
+            title=context.user_data['question_title'],
+            image_url=context.user_data['question_image'] if context.user_data['question_image'] != '0' else None,
+            option_a=context.user_data['option_a'],
+            option_b=context.user_data['option_b'],
+            option_c=context.user_data['option_c'],
+            option_d=context.user_data['option_d'],
+            correct_answer=context.user_data['correct_answer'],
+            category_id=category_id
+        )
+        session.add(new_question)
+        session.commit()
+        session.close()
+        
+        context.user_data.clear()
+        
+        keyboard = [[InlineKeyboardButton("🔙 بازگشت به پنل ادمین", callback_data='admin_menu')]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await query.edit_message_text(
+            "✅ سؤال با موفقیت اضافه شد.",
+            reply_markup=reply_markup
+        )
+        return ConversationHandler.END
+        
+    except (ValueError, KeyError, AttributeError) as e:
+        logging.error(f"Error in add_question_category: {e}")
+        await query.edit_message_text(
+            "❌ خطایی رخ داد. لطفاً دوباره تلاش کنید.",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("🔙 بازگشت به پنل ادمین", callback_data='admin_menu')
+            ]])
+        )
+        return ConversationHandler.END
+
 # *************************************************************************************** Add Question Image *****************************************
 async def add_question_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.callback_query and update.callback_query.data == 'admin_menu':
@@ -273,7 +324,7 @@ async def add_category_start(update: Update, context: ContextTypes.DEFAULT_TYPE)
         reply_markup=reply_markup
     )
     return CATEGORY_NAME
-# *************************************************************************************** Cancel *****************************************
+# *************************************************************************************** Cancel ****************************************************
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """لغو عملیات و برگشت به منوی اصلی"""
     keyboard = [[InlineKeyboardButton("🔙 بازگشت به پنل ادمین", callback_data='admin_menu')]]
@@ -513,4 +564,3 @@ async def show_category_exams(update: Update, context: ContextTypes.DEFAULT_TYPE
     )
     session.close()
 
-# $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$   $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
